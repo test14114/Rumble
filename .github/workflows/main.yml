@@ -1,9 +1,10 @@
 # This workflow builds a Theos-based iOS application.
 #
 # It includes steps to:
-# 1. Install Theos dependencies (ldid, xz) and an updated 'make' for parallel builds.
-# 2. Clone Theos itself and set the $THEOS environment variable.
-# 3. Override the 'ARCHS' variable to build only for modern 64-bit architectures.
+# 1. Check out the repository AND all its submodules.
+# 2. Install Theos dependencies (ldid, xz), gnu-make, and libyaml.
+# 3. Clone Theos itself and set the $THEOS environment variable.
+# 4. Override the 'ARCHS' variable to build only for modern 64-bit architectures.
 
 name: Build iOS App
 
@@ -22,6 +23,10 @@ jobs:
     steps:
       - name: Check out repository
         uses: actions/checkout@v4
+        with:
+          # ** THIS IS THE FIX **
+          # Recursively check out all submodules (like RumbleExt/yaml)
+          submodules: 'recursive'
 
       - name: Select Xcode version
         run: |
@@ -33,8 +38,9 @@ jobs:
       # --- Install Theos & Build Dependencies ---
       - name: Install Dependencies
         run: |
-          echo "Installing Theos dependencies (ldid, xz) and gnu-make (for parallel builds)..."
-          brew install ldid xz make
+          echo "Installing Theos dependencies (ldid, xz), gnu-make, and libyaml..."
+          # Added libyaml as a dependency for the RumbleExt subproject
+          brew install ldid xz make libyaml
 
       - name: Clone Theos Repository
         run: |
@@ -50,9 +56,8 @@ jobs:
       # --- Main Build Step ---
       - name: Run make
         run: |
-          # We use 'gmake' (from brew) for parallel building.
-          # We override ARCHS to build only for modern 64-bit architectures,
-          # as armv7 is not supported by the Xcode 16.4 SDK.
+          # Use gmake for parallel building
+          # Override ARCHS to skip armv7
           gmake ARCHS="arm64e arm64"
 
       # --- Upload Artifacts ---
@@ -60,12 +65,9 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: iOS-App-Build
-          # Theos projects often output to a './packages' directory.
-          # Adjust if your project is different.
           path: |
             packages/*.ipa
           retention-days: 7
-          # Optional: tell upload-artifact to not fail if no files are found
-          # if-no-files-found: warn 
+          if-no-files-found: warn # Don't fail the workflow if the .ipa isn't found
 
 

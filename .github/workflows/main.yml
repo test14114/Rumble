@@ -1,13 +1,7 @@
-# This workflow builds an iOS application using a Makefile.
+# This workflow builds a Theos-based iOS application.
 #
-# To use this file:
-# 1. Create a directory named '.github/workflows' in the root of your repository.
-# 2. Save this file as 'build-ios.yml' inside that directory.
-# 3. Push the file to your repository.
-#
-# You will likely need to edit:
-#   - The make command in the 'Run make' step (if it's not just 'make').
-#   - The 'path' in the 'Upload build artifact' step to point to your final .app or .ipa.
+# It includes steps to install Theos dependencies, clone Theos itself,
+# and set the $THEOS environment variable before running 'make'.
 
 name: Build iOS App
 
@@ -36,31 +30,39 @@ jobs:
           # List available Xcode versions on the runner
           ls -l /Applications/ | grep Xcode
           
-          # ** UPDATED THIS **
-          # Select a specific Xcode version from the logs above.
-          # We are selecting 'Xcode_16.4.app' as it's available.
+          # Select a specific Xcode version from the logs.
           sudo xcode-select -s /Applications/Xcode_16.4.app/Contents/Developer
           
           # Verify the selected version
           xcodebuild -version
           swift -version
 
-      # --- Optional: Install Dependencies ---
-      # Uncomment and adapt these steps if you use CocoaPods, Carthage, or SPM
+      # --- Install Theos ---
+      - name: Install Theos Dependencies
+        run: |
+          echo "Installing Theos dependencies (ldid, xz)..."
+          brew install ldid xz
+
+      - name: Clone Theos Repository
+        run: |
+          echo "Cloning Theos..."
+          # Clone Theos into a directory within the workspace
+          # We use --recursive to fetch all its submodules
+          git clone --recursive https://github.com/theos/theos.git $GITHUB_WORKSPACE/theos
+
+      - name: Set THEOS Environment Variable
+        run: |
+          echo "Setting THEOS environment variable..."
+          # Set the $THEOS var for all subsequent steps in this job
+          echo "THEOS=$GITHUB_WORKSPACE/theos" >> $GITHUB_ENV
+      # --- End Install Theos ---
+
+
+      # --- Optional: Install Dependencies (SPM/CocoaPods) ---
+      # If your project also uses other dependencies, uncomment as needed
       
-      # - name: Cache CocoaPods
-      #   uses: actions/cache@v4
-      #   with:
-      #     path: Pods
-      #     key: ${{ runner.os }}-pods-${{ hashFiles('**/Podfile.lock') }}
-      #     restore-keys: |
-      #       ${{ runner.os }}-pods-
-
-      # - name: Install CocoaPods
-      #   run: pod install
-
       # - name: Cache SwiftPM dependencies
-      #   uses: actions/cache@v4
+      #   uses: actions/cache@vv4
       #   with:
       #     path: .build
       #     key: ${{ runner.os }}-spm-${{ hashFiles('**/Package.resolved') }}
@@ -70,22 +72,24 @@ jobs:
       # - name: Fetch SwiftPM dependencies
       #   run: swift package resolve
 
+
       # --- Main Build Step ---
       - name: Run make
-        run: make # ** UPDATE THIS ** if your target is different, e.g., 'make archive' or 'make build'
+        # The $THEOS environment variable set above will be
+        # automatically used by 'make'
+        run: make
 
       # --- Upload Artifacts ---
       - name: Upload build artifact
-        # This step uploads the build output (e.g., .app or .ipa) so you can download it.
         uses: actions/upload-artifact@v4
         with:
           name: iOS-App-Build
           # ** IMPORTANT: YOU MUST UPDATE THIS PATH! **
           # Point this to the output directory and file from your Makefile.
+          # Theos projects often output to a './packages' directory.
           path: |
-            build/Release-iphoneos/*.app
-            # build/Release-iphoneos/*.ipa
-            # ./output/*.ipa
-          retention-days: 7 # Optional: How long to keep the artifact
+            packages/*.ipa
+            # build/Release-iphoneos/*.app
+          retention-days: 7
 
 

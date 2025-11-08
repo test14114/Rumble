@@ -1,0 +1,91 @@
+# This workflow builds an iOS application using a Makefile.
+#
+# To use this file:
+# 1. Create a directory named '.github/workflows' in the root of your repository.
+# 2. Save this file as 'build-ios.yml' inside that directory.
+# 3. Push the file to your repository.
+#
+# You will likely need to edit:
+#   - The Xcode version in the 'Select Xcode version' step.
+#   - The make command in the 'Run make' step (if it's not just 'make').
+#   - The 'path' in the 'Upload build artifact' step to point to your final .app or .ipa.
+
+name: Build iOS App
+
+on:
+  # Trigger the build on push or pull request to the main/master branch
+  push:
+    branches: [ "main", "master" ]
+  pull_request:
+    branches: [ "main", "master" ]
+  
+  # Allow you to run this workflow manually from the Actions tab
+  workflow_dispatch:
+
+jobs:
+  build:
+    name: Build iOS App
+    # iOS apps must be built on macOS
+    runs-on: macos-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Select Xcode version
+        run: |
+          # List available Xcode versions on the runner
+          ls -l /Applications/ | grep Xcode
+          
+          # ** UPDATE THIS **
+          # Select a specific Xcode version. 
+          # Check the runner's available versions from the log output above.
+          sudo xcode-select -s /Applications/Xcode_16.0.1.app/Contents/Developer
+          
+          # Verify the selected version
+          xcodebuild -version
+          swift -version
+
+      # --- Optional: Install Dependencies ---
+      # Uncomment and adapt these steps if you use CocoaPods, Carthage, or SPM
+      
+      # - name: Cache CocoaPods
+      #   uses: actions/cache@v4
+      #   with:
+      #     path: Pods
+      #     key: ${{ runner.os }}-pods-${{ hashFiles('**/Podfile.lock') }}
+      #     restore-keys: |
+      #       ${{ runner.os }}-pods-
+
+      # - name: Install CocoaPods
+      #   run: pod install
+
+      # - name: Cache SwiftPM dependencies
+      #   uses: actions/cache@v4
+      #   with:
+      #     path: .build
+      #     key: ${{ runner.os }}-spm-${{ hashFiles('**/Package.resolved') }}
+      #     restore-keys: |
+      #       ${{ runner.os }}-spm-
+      
+      # - name: Fetch SwiftPM dependencies
+      #   run: swift package resolve
+
+      # --- Main Build Step ---
+      - name: Run make
+        run: make # ** UPDATE THIS ** if your target is different, e.g., 'make archive' or 'make build'
+
+      # --- Upload Artifacts ---
+      - name: Upload build artifact
+        # This step uploads the build output (e.g., .app or .ipa) so you can download it.
+        uses: actions/upload-artifact@v4
+        with:
+          name: iOS-App-Build
+          # ** IMPORTANT: YOU MUST UPDATE THIS PATH! **
+          # Point this to the output directory and file from your Makefile.
+          path: |
+            build/Release-iphoneos/*.app
+            # build/Release-iphoneos/*.ipa
+            # ./output/*.ipa
+          retention-days: 7 # Optional: How long to keep the artifact
+

@@ -6,7 +6,6 @@
 # 3. Push the file to your repository.
 #
 # You will likely need to edit:
-#   - The Xcode version in the 'Select Xcode version' step.
 #   - The make command in the 'Run make' step (if it's not just 'make').
 #   - The 'path' in the 'Upload build artifact' step to point to your final .app or .ipa.
 
@@ -37,10 +36,10 @@ jobs:
           # List available Xcode versions on the runner
           ls -l /Applications/ | grep Xcode
           
-          # ** UPDATE THIS **
-          # Select a specific Xcode version. 
-          # Check the runner's available versions from the log output above.
-          sudo xcode-select -s /Applications/Xcode_16.0.1.app/Contents/Developer
+          # ** UPDATED THIS **
+          # Select a specific Xcode version from the logs above.
+          # We are selecting 'Xcode_16.4.app' as it's available.
+          sudo xcode-select -s /Applications/Xcode_16.4.app/Contents/Developer
           
           # Verify the selected version
           xcodebuild -version
@@ -88,4 +87,5 @@ jobs:
             # build/Release-iphoneos/*.ipa
             # ./output/*.ipa
           retention-days: 7 # Optional: How long to keep the artifact
+
 
